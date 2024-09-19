@@ -19,6 +19,7 @@ const defaultPostSelect = {
   text: true,
   createdAt: true,
   updatedAt: true,
+  resolved: true,
 } satisfies Prisma.PostSelect;
 
 export const postRouter = router({
@@ -57,7 +58,6 @@ export const postRouter = router({
       if (items.length > limit) {
         // Remove the last item and use it as next cursor
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const nextItem = items.pop()!;
         nextCursor = nextItem.id;
       }
@@ -99,6 +99,23 @@ export const postRouter = router({
       const post = await prisma.post.create({
         data: input,
         select: defaultPostSelect,
+      });
+      return post;
+    }),
+  resolve: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const post = await prisma.post.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          resolved: true,
+        },
       });
       return post;
     }),

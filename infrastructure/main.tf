@@ -48,6 +48,7 @@ resource "azurerm_subnet" "tanso_demo_app" {
   delegation {
     name = "delegation"
     service_delegation {
+      actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
       name = "Microsoft.Web/serverFarms"
     }
   }
@@ -74,7 +75,7 @@ resource "azurerm_postgresql_flexible_server" "tanso_demo" {
   delegated_subnet_id           = azurerm_subnet.tanso_demo.id
   private_dns_zone_id           = azurerm_private_dns_zone.tanso_demo.id
   public_network_access_enabled = false
-  administrator_login           = "psqladmin"
+  administrator_login           = var.azure_postgresql_admin_user
   administrator_password        = var.azure_postgresql_admin_password
   zone                          = "1"
 
@@ -110,6 +111,12 @@ resource "azurerm_linux_web_app" "tanso_demo" {
   resource_group_name   = azurerm_resource_group.tanso_demo.name
   service_plan_id       = azurerm_service_plan.tanso_demo.id
   https_only            = true
+  virtual_network_subnet_id = azurerm_subnet.tanso_demo_app.id
+
+  app_settings =  {
+    "DATABASE_URL" = "postgresql://${var.azure_postgresql_admin_user}:${var.azure_postgresql_admin_password}@${azurerm_postgresql_flexible_server.tanso_demo.name}.postgres.database.azure.com:5432/${azurerm_postgresql_flexible_server_database.tanso_demo.name}"
+  }
+
   site_config { 
     minimum_tls_version = "1.2"
     application_stack {
@@ -125,7 +132,7 @@ resource "azurerm_app_service_virtual_network_swift_connection" "tanso_demo" {
 
 resource "azurerm_app_service_source_control" "hello_world" {
   app_id             = azurerm_linux_web_app.tanso_demo.id
-  repo_url           = "https://github.com/Azure-Samples/nodejs-docs-hello-world"
+  repo_url           = "https://github.com/dozgunyal/trpc-azure-demo"
   branch             = "main"
   use_manual_integration = true
   use_mercurial      = false
@@ -148,4 +155,9 @@ variable "azure_subscription_id" {
 }
 variable "azure_postgresql_admin_password" {
   type = string
+}
+
+variable "azure_postgresql_admin_user" {
+  type = string
+  default = "psqladmin"
 }
